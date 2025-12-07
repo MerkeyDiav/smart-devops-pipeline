@@ -107,10 +107,7 @@ Le pipeline s'exécute automatiquement sur chaque push et Pull Request. Il gén�
 - Coût estimé par exécution : $0.05 - $0.20
 - Gratuit dans le Free Tier Bedrock
 
-## Article technique
-
-Ce projet accompagne l'article "J'ai construit un pipeline CI/CD intelligent avec AWS + IA qui détecte les mauvaises pratiques DevOps avant le déploiement".
 
 ## Auteur
 
-Nehemie Diavita - AWS Community Builder
+Nehemie Nzuzi
