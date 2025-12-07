@@ -1,0 +1,110 @@
+name: Smart DevOps Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-analysis:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Python dependencies
+        run: |
+          pip install -r pipeline/requirements.txt
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Run Smart Pipeline
+        id: pipeline
+        continue-on-error: true
+        run: |
+          python pipeline/main.py
+      
+      - name: Upload Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-reports
+          path: |
+            pipeline_report.json
+            pipeline_report.md
+            pipeline_blocked.txt
+          retention-days: 30
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let comment = '## Smart DevOps Pipeline Results\n\n';
+            
+            try {
+              const report = JSON.parse(fs.readFileSync('pipeline_report.json', 'utf8'));
+              
+              comment += `**Decision:** ${report.decision}\n`;
+              comment += `**Risk Score:** ${report.risk_score}/100\n\n`;
+              
+              comment += '### Issues Summary\n\n';
+              comment += '| Severity | Count |\n';
+              comment += '|----------|-------|\n';
+              comment += `| Critical | ${report.severity_counts.critical} |\n`;
+              comment += `| High | ${report.severity_counts.high} |\n`;
+              comment += `| Medium | ${report.severity_counts.medium} |\n`;
+              comment += `| Low | ${report.severity_counts.low} |\n`;
+              comment += `| **Total** | **${report.total_issues}** |\n\n`;
+              
+              if (report.decision === 'BLOCK') {
+                comment += '**Action Required:** Fix critical issues before merging.\n\n';
+              } else if (report.decision === 'WARN') {
+                comment += '**Warning:** Review and fix issues recommended.\n\n';
+              } else {
+                comment += '**Status:** All checks passed!\n\n';
+              }
+              
+              const criticalIssues = report.issues.filter(i => i.severity === 'critical').slice(0, 5);
+              if (criticalIssues.length > 0) {
+                comment += '### Critical Issues\n\n';
+                criticalIssues.forEach(issue => {
+                  comment += `- **${issue.title}** in \`${issue.file}\` (line ${issue.line})\n`;
+                  comment += `  ${issue.description}\n\n`;
+                });
+              }
+              
+            } catch (error) {
+              comment += 'Error reading pipeline report.\n';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+      
+      - name: Fail if blocked
+        if: steps.pipeline.outcome == 'failure'
+        run: |
+          echo "Pipeline blocked due to critical issues"
+          exit 1

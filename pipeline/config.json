@@ -1,0 +1,38 @@
+{
+  "bedrock": {
+    "model_id": "amazon.nova-pro-v1:0",
+    "region": "us-east-1",
+    "max_tokens": 4096,
+    "temperature": 0.1
+  },
+  "thresholds": {
+    "critical": 0,
+    "high": 3,
+    "medium": 10
+  },
+  "scanners": {
+    "trivy": false,
+    "tflint": false,
+    "checkov": false,
+    "ai_review": true
+  },
+  "files_to_scan": {
+    "terraform": "terraform/**/*.tf",
+    "dockerfile": "Dockerfile",
+    "code": "app/**/*.{ts,tsx,js,jsx}"
+  },
+  "false_positives": {
+    "confidence_threshold": 0.7,
+    "ignored_files": [
+      ".env.example",
+      "README.md",
+      "*.test.ts",
+      "*.spec.ts"
+    ]
+  },
+  "reporting": {
+    "output_format": "json",
+    "generate_markdown": true,
+    "post_to_github": false
+  }
+}
