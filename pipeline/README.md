@@ -1,6 +1,6 @@
 # Smart DevOps Pipeline
 
-Pipeline CI/CD intelligent avec analyse IA pour détecter les mauvaises pratiques DevOps avant le déploiement.
+
 
 ## Architecture
 
